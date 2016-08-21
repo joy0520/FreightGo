@@ -2,13 +2,16 @@ package com.joy.freightgo;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -18,23 +21,32 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResult;
 
 /**
  * Created by Joy on 2016/8/20.
  */
-public class MainActivity extends Activity implements LocationHelper.LocationChangedCallback,
+public class MainActivity extends Activity implements LocationListener,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
     private static final String joytag = "joydebug.mainactivity.";
 
     private static final int PERMISSION_LOCATION_REQUEST_CODE = 0;
 
+    private static final long UPDATE_LOCATION_INTERVAL_MS = 10000;
+    private static final long UPDATE_LOCATION_FASTEST_INTERVAL_MS = 5000;
+
     private TextView mPosition;
     private ImageView mSetting, mAddLocation;
 
-    private LocationHelper mLocation;
+    private LocationManager mManager;
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
+    private LocationRequest mLocationRequest;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -59,7 +71,7 @@ public class MainActivity extends Activity implements LocationHelper.LocationCha
         });
 
         showPermissionDialog();
-        mLocation = new LocationHelper(getApplicationContext());
+        mManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         // Create an instance of GoogleAPIClient.
         if (mGoogleApiClient == null) {
@@ -69,6 +81,7 @@ public class MainActivity extends Activity implements LocationHelper.LocationCha
                     .addApi(LocationServices.API)
                     .build();
         }
+        mGoogleApiClient.connect();
     }
 
     @Override
@@ -78,8 +91,8 @@ public class MainActivity extends Activity implements LocationHelper.LocationCha
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission granted
                     // Register the listener with the Location Manager to receive location updates
-                    mLocation.setListening(true);
-                    mLocation.setCallback(this);
+//                    mLocation.setListening(true);
+//                    mLocation.setCallback(this);
                 } else {
                     // Permission denied
                     finish();
@@ -89,7 +102,7 @@ public class MainActivity extends Activity implements LocationHelper.LocationCha
     }
 
     private void showPermissionDialog() {
-        if (!LocationHelper.checkPermission(this)) {
+        if (!checkPermission(this)) {
             ActivityCompat.requestPermissions(
                     this,
                     new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -101,27 +114,35 @@ public class MainActivity extends Activity implements LocationHelper.LocationCha
     @Override
     protected void onStart() {
         super.onStart();
-        mGoogleApiClient.connect();
+//        mManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this);
+//        mManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        mLocation.setListening(false);
-        mGoogleApiClient.disconnect();
+//        mManager.removeUpdates(this);
+        //LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+        //mGoogleApiClient.disconnect();
     }
 
     @Override
-    public void onChanged(Location location) {
-        Log.i(joytag+"onChanged()", ""+location);
-        updatePositionText(location);
+    protected void onPause() {
+        super.onPause();
+        //stopLocationUpdates();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mGoogleApiClient.isConnected()) startLocationUpdates();
     }
 
     private void updatePositionText(Location location) {
         Log.i(joytag+"updatePositionText()", ""+location);
         StringBuilder builder = new StringBuilder();
         builder.append(location.getLatitude()).append(" ")
-                .append(location.getLongitude()).append("\n");
+                .append(location.getLongitude());
         mPosition.setText(builder.toString());
     }
 
@@ -133,6 +154,17 @@ public class MainActivity extends Activity implements LocationHelper.LocationCha
             Log.i(joytag+"onConnected()", "updatePositionText(mLastLocation);");
             updatePositionText(mLastLocation);
         }
+
+        createLocationRequest();
+
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(mLocationRequest);
+        PendingResult<LocationSettingsResult> result =
+                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,
+                        builder.build());
+//        result.setResultCallback(this);
+
+        startLocationUpdates();
     }
 
     @Override
@@ -143,5 +175,39 @@ public class MainActivity extends Activity implements LocationHelper.LocationCha
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
+    }
+
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(UPDATE_LOCATION_INTERVAL_MS);
+        mLocationRequest.setFastestInterval(UPDATE_LOCATION_FASTEST_INTERVAL_MS);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+    }
+
+    private boolean checkPermission(Context context) {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+
+    @Override
+    public void onLocationChanged(Location location) {
+        // TODO
+        Log.i(joytag+"onLocationChanged()",
+                ""+location.getLatitude()
+                        +", "+location.getAltitude()
+                        +", "+location.getTime()
+        );
+        updatePositionText(location);
+    }
+
+    protected void startLocationUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
+    }
+
+    protected void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(
+                mGoogleApiClient, this);
     }
 }
