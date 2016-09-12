@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setting_car_number">使用車號</string>
+    <string name="setting_name">使用人員</string>
+    <string name="setting_password">密碼</string>
+    <string name="setting_confirm">確認</string>
+</resources>

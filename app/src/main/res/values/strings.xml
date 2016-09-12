@@ -1,4 +1,10 @@
 <resources>
-    <string name="app_name">FreightGo</string>
-    <string name="title_activity_maps">Map</string>
+    <string name="app_name" translatable="false">FreightGo</string>
+    <string name="title_activity_maps" translatable="false">Map</string>
+    
+    <!--Setting Activity-->
+    <string name="setting_name">Name</string>
+    <string name="setting_car_number">Car Number</string>
+    <string name="setting_password">Password</string>
+    <string name="setting_confirm">Confirm</string>
 </resources>
