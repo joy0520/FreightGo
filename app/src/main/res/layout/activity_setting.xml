@@ -16,7 +16,8 @@
         android:layout_height="match_parent"
         android:layout_gravity="start|top"
         android:gravity="start"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="6dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -55,12 +56,26 @@
             android:padding="10dp"
             android:inputType="textPassword" />
 
-        <Button
-            android:id="@+id/button_confirm"
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/setting_confirm" />
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <Button
+                android:id="@+id/button_login"
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_login"
+                android:layout_alignParentStart="true" />
+
+            <Button
+                android:id="@+id/button_signup"
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_signup"
+                android:layout_alignParentEnd="true" />
+        </RelativeLayout>
 
     </LinearLayout>
 </FrameLayout>

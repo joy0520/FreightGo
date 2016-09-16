@@ -6,5 +6,6 @@
     <string name="setting_name">Name</string>
     <string name="setting_car_number">Car Number</string>
     <string name="setting_password">Password</string>
-    <string name="setting_confirm">Confirm</string>
+    <string name="setting_login">Log in</string>
+    <string name="setting_signup">Sign up</string>
 </resources>

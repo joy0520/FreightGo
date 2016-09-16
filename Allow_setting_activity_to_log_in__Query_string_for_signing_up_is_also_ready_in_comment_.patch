@@ -1,0 +1,371 @@
+Index: app/src/main/java/com/joy/freightgo/MainActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/joy/freightgo/MainActivity.java	(revision 327855beeee25a6f4c6449c37282addde31d84f8)
++++ app/src/main/java/com/joy/freightgo/MainActivity.java	(revision )
+@@ -16,7 +16,10 @@
+ import android.view.Menu;
+ import android.view.MenuInflater;
+ import android.view.View;
++import android.widget.Button;
++import android.widget.EditText;
+ import android.widget.ImageView;
++import android.widget.ProgressBar;
+ import android.widget.TextView;
+ import android.widget.Toast;
+ 
+Index: app/src/main/java/com/joy/freightgo/SettingActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/joy/freightgo/SettingActivity.java	(revision 327855beeee25a6f4c6449c37282addde31d84f8)
++++ app/src/main/java/com/joy/freightgo/SettingActivity.java	(revision )
+@@ -1,19 +1,121 @@
+ package com.joy.freightgo;
+ 
+ import android.app.Activity;
++import android.os.AsyncTask;
+ import android.os.Bundle;
+ import android.util.Log;
++import android.view.View;
++import android.widget.Button;
++import android.widget.EditText;
++import android.widget.ProgressBar;
++import android.widget.Toast;
+ 
++import java.sql.Connection;
++import java.sql.ResultSet;
++import java.sql.Statement;
++
+ /**
+  * Created by Joy on 2016/8/20.
+  */
+ public class SettingActivity extends Activity {
+-    private static final String joytag = "joy.settingactivity.";
++    private static final String joytag = "joydebug.settingactivity.";
++    private static final String LOGIN_FAIL = "login_fail";
++    private static final String LOGIN_SUCCESS = "login_success";
+ 
++    private ConnectionHelper connection;
++    private EditText editName, editCarName, editPassword;
++    private Button btnLogin;
++    private ProgressBar progressBar;
++
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+-        Log.i(joytag+"", "onCreate");
++        Log.i(joytag + "", "onCreate");
+         setContentView(R.layout.activity_setting);
++        editName = (EditText) findViewById(R.id.edit_name);
++        editCarName = (EditText) findViewById(R.id.edit_car_name);
++        editPassword = (EditText) findViewById(R.id.edit_password);
++        btnLogin = (Button) findViewById(R.id.button_confirm);
++        progressBar = (ProgressBar) findViewById(R.id.progress_bar);
++
++        btnLogin.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View v) {
++                DoLogin login = new DoLogin();
++                login.execute(editName.getText().toString(),
++                        editCarName.getText().toString(),
++                        editPassword.getText().toString());
++            }
++        });
++    }
++
++    public class DoLogin extends AsyncTask<String, Void, String> {
++        String name, carName, password;
++        boolean isSuccessful = false;
++
++        @Override
++        protected String doInBackground(String... params) {
++            Log.i(joytag, "doInBackground "+params);
++            name = params[0];
++            carName = params[1];
++            password = params[2];
++            if (name == null || carName == null || password == null) {
++                Log.i(joytag, "name="+name+", carName="+carName+", password="+password);
++                return LOGIN_FAIL;
++            }
++            try {
++                Connection connection = ConnectionHelper.connect();
++                if (connection == null) {
++                    Log.i(joytag, "connection == null");
++                    return LOGIN_FAIL;
++                } else {
++                    // sign up
++//                    String query = "INSERT INTO "+ConnectionHelper.dbSheetName
++//                            +" (carNumber, ID) VALUES ('"
++//                            +carName+"', '"
++//                            +name+"')";
++//                    Statement statement = connection.createStatement();
++//                    int result = statement.executeUpdate(query);
++//                    Log.i(joytag, "after INSERT result="+result);
++//                    isSuccessful = true;
++//                    return LOGIN_SUCCESS;
++
++                    // log in
++                    String query = "SELECT * from "+ConnectionHelper.dbSheetName
++                            +" where ID='"+name+"' and carNumber='"+carName
++                            +"'";
++                    Statement statement = connection.createStatement();
++                    ResultSet resultSet = statement.executeQuery(query);
++                    Log.i(joytag, "resultSet="+resultSet);
++                    if (resultSet.next()) {
++                        isSuccessful = true;
++                        return LOGIN_SUCCESS;
++                    }
++                }
++            } catch (Exception e) {
++                Log.d(joytag, "try to connect exception", e);
++            }
++            return LOGIN_FAIL;
++        }
++
++        @Override
++        protected void onPostExecute(String s) {
++            super.onPostExecute(s);
++            progressBar.setVisibility(View.GONE);
++            if (isSuccessful) {
++                Toast.makeText(SettingActivity.this,
++                        s, Toast.LENGTH_SHORT).show();
++                finish();
++            } else {
++                Toast.makeText(SettingActivity.this,
++                        s, Toast.LENGTH_SHORT).show();
++            }
++        }
++
++        @Override
++        protected void onPreExecute() {
++            super.onPreExecute();
++            progressBar.setVisibility(View.VISIBLE);
++        }
+     }
+ }
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/AndroidManifest.xml	(revision 327855beeee25a6f4c6449c37282addde31d84f8)
++++ app/src/main/AndroidManifest.xml	(revision )
+@@ -7,10 +7,10 @@
+          Google Maps Android API v2, but you must specify either coarse or fine
+          location permissions for the 'MyLocation' functionality. 
+     -->
+-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+     <uses-permission android:name="android.support.multidex.MultiDexApplication" />
+     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
++    <uses-permission android:name="android.permission.INTERNET"/>
+ 
+     <application
+         android:name=".FreightGoApp"
+\ No newline at end of file
+Index: app/src/main/res/values-zh/strings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values-zh/strings.xml	(revision )
++++ app/src/main/res/values-zh/strings.xml	(revision )
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="setting_car_number">使用車號</string>
++    <string name="setting_name">使用人員</string>
++    <string name="setting_password">密碼</string>
++    <string name="setting_confirm">確認</string>
++</resources>
+\ No newline at end of file
+Index: app/src/main/res/values/strings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/strings.xml	(revision 327855beeee25a6f4c6449c37282addde31d84f8)
++++ app/src/main/res/values/strings.xml	(revision )
+@@ -1,4 +1,10 @@
+ <resources>
+-    <string name="app_name">FreightGo</string>
+-    <string name="title_activity_maps">Map</string>
++    <string name="app_name" translatable="false">FreightGo</string>
++    <string name="title_activity_maps" translatable="false">Map</string>
++    
++    <!--Setting Activity-->
++    <string name="setting_name">Name</string>
++    <string name="setting_car_number">Car Number</string>
++    <string name="setting_password">Password</string>
++    <string name="setting_confirm">Confirm</string>
+ </resources>
+Index: app/src/main/java/com/joy/freightgo/ConnectionHelper.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/joy/freightgo/ConnectionHelper.java	(revision )
++++ app/src/main/java/com/joy/freightgo/ConnectionHelper.java	(revision )
+@@ -0,0 +1,45 @@
++package com.joy.freightgo;
++
++import android.annotation.SuppressLint;
++import android.os.StrictMode;
++import android.util.Log;
++
++import java.sql.Connection;
++import java.sql.DriverManager;
++import java.sql.SQLException;
++
++/**
++ * Created by Joy on 2016/9/7.
++ */
++public class ConnectionHelper {
++    private static String ReflectionClassName = "net.sourceforge.jtds.jdbc.Driver";
++
++    private static String ip = "60.249.197.60";
++    private static String db = "SBIR";
++    private static String userName = "SBIR";
++    private static String password = "qwer2016@1";
++    public static String dbSheetName = "car";
++
++    @SuppressLint("NewApi")
++    public static Connection connect() {
++        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder()
++                .permitAll().build();
++        StrictMode.setThreadPolicy(policy);
++        Connection conn = null;
++        String ConnURL = null;
++        try {
++            Class.forName(ReflectionClassName);
++            ConnURL = "jdbc:jtds:sqlserver://" + ip + ";"
++                    + "databaseName=" + db + ";user=" + userName + ";password="
++                    + password + ";";
++            conn = DriverManager.getConnection(ConnURL);
++        } catch (SQLException se) {
++            Log.e("ERRO", se.getMessage());
++        } catch (ClassNotFoundException e) {
++            Log.e("ERRO", e.getMessage());
++        } catch (Exception e) {
++            Log.e("ERRO", e.getMessage());
++        }
++        return conn;
++    }
++}
+Index: app/src/main/res/layout/activity_setting.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/layout/activity_setting.xml	(revision 327855beeee25a6f4c6449c37282addde31d84f8)
++++ app/src/main/res/layout/activity_setting.xml	(revision )
+@@ -1,29 +1,66 @@
+ <?xml version="1.0" encoding="utf-8"?>
++
++<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent">
++
++    <ProgressBar
++        android:id="@+id/progress_bar"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_gravity="center"
++        android:visibility="gone" />
++
+-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+-    android:orientation="vertical"
+-    android:layout_width="match_parent"
+-    android:layout_height="match_parent"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
+-    android:gravity="center"
+-    android:layout_gravity="center_horizontal">
++        android:layout_gravity="start|top"
++        android:gravity="start"
++        android:orientation="vertical">
+ 
+-    <TextView
+-        android:layout_width="wrap_content"
+-        android:layout_height="wrap_content"
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
+-        android:text="My name is..." />
++            android:text="@string/setting_name" />
+ 
+-    <EditText
++        <EditText
++            android:id="@+id/edit_name"
+-        android:layout_width="match_parent"
++            android:layout_width="match_parent"
+-        android:layout_height="80dp"
+-        android:id="@+id/editText"
++            android:layout_height="wrap_content"
++            android:lines="1"
++            android:padding="10dp" />
++
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="@string/setting_car_number" />
++
++        <EditText
++            android:id="@+id/edit_car_name"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:lines="1"
++            android:padding="10dp" />
++
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="@string/setting_password" />
++
++        <EditText
++            android:id="@+id/edit_password"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:lines="1"
+-        android:padding="10dp"
++            android:padding="10dp"
+-        android:ems="10"
+-        android:lines="1"/>
++            android:inputType="textPassword" />
+ 
+-    <Button
++        <Button
++            android:id="@+id/button_confirm"
+-        style="?android:attr/buttonStyleSmall"
+-        android:layout_width="wrap_content"
+-        android:layout_height="wrap_content"
++            style="?android:attr/buttonStyleSmall"
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
+-        android:text="Set"
+-        android:id="@+id/set_button" />
++            android:text="@string/setting_confirm" />
+ 
+-</LinearLayout>
+\ No newline at end of file
++    </LinearLayout>
++</FrameLayout>
+\ No newline at end of file
+Index: app/build.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/build.gradle	(revision 327855beeee25a6f4c6449c37282addde31d84f8)
++++ app/build.gradle	(revision )
+@@ -31,4 +31,5 @@
+     compile 'com.google.android.gms:play-services:9.4.0'
+     compile 'com.android.support:multidex:1.0.0'
+     compile 'com.google.android.gms:play-services-wearable:9.4.0'
++    compile files('libs/jtds-1.2.7.jar')
+ }

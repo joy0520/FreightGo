@@ -55,6 +55,9 @@ public class MainActivity extends Activity implements LocationListener,
     private static final long UPDATE_LOCATION_INTERVAL_MS = 10000;
     private static final long UPDATE_LOCATION_FASTEST_INTERVAL_MS = 5000;
 
+    public static final int REQUEST_CODE_LOGIN = 0;
+    public static final String RESULT_LOGIN_EXTRA_TAG = "freightgo.result.login.extra";
+
     private MapFrag mMap;
     private TextView mPosition;
     private ImageView mSetting, mAddLocation;
@@ -65,6 +68,23 @@ public class MainActivity extends Activity implements LocationListener,
     private LocationRequest mLocationRequest;
     private GoogleMap mGoogleMap;
     private ArrayList<LatLng> mLatLngs;
+
+    private boolean mUploadLocation = false;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_LOGIN && resultCode == RESULT_OK) {
+            boolean isSuccessful = data.getBooleanExtra(RESULT_LOGIN_EXTRA_TAG, false);
+            Log.i(joytag, "onActivityResult() isSuccessful="+isSuccessful);
+            // start write location into server
+            if (isSuccessful) {
+                mUploadLocation = true;
+            }
+        } else {
+            Log.i(joytag, "onActivityResult() log in fail");
+        }
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -94,7 +114,9 @@ public class MainActivity extends Activity implements LocationListener,
         mSetting.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(getApplicationContext(), SettingActivity.class));
+                startActivityForResult(
+                        new Intent(getApplicationContext(), SettingActivity.class),
+                        REQUEST_CODE_LOGIN);
             }
         });
 
