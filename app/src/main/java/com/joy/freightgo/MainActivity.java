@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -40,7 +41,12 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.sql.Connection;
+import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Locale;
 
 /**
  * Created by Joy on 2016/8/20.
@@ -56,7 +62,9 @@ public class MainActivity extends Activity implements LocationListener,
     private static final long UPDATE_LOCATION_FASTEST_INTERVAL_MS = 5000;
 
     public static final int REQUEST_CODE_LOGIN = 0;
-    public static final String RESULT_LOGIN_EXTRA_TAG = "freightgo.result.login.extra";
+    public static final String RESULT_EXTRA_LOGIN = "freightgo.result.extra.login";
+    public static final String RESULT_EXTRA_USER_NAME = "freightgo.result.extra.username";
+    public static final String RESULT_EXTRA_CAR_NAME = "freightgo.result.extra.carname";
 
     private MapFrag mMap;
     private TextView mPosition;
@@ -70,16 +78,20 @@ public class MainActivity extends Activity implements LocationListener,
     private ArrayList<LatLng> mLatLngs;
 
     private boolean mUploadLocation = false;
+    private String mName = null;
+    private String mCarName = null;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_LOGIN && resultCode == RESULT_OK) {
-            boolean isSuccessful = data.getBooleanExtra(RESULT_LOGIN_EXTRA_TAG, false);
+            boolean isSuccessful = data.getBooleanExtra(RESULT_EXTRA_LOGIN, false);
             Log.i(joytag, "onActivityResult() isSuccessful="+isSuccessful);
             // start write location into server
             if (isSuccessful) {
                 mUploadLocation = true;
+                mName = data.getStringExtra(RESULT_EXTRA_USER_NAME);
+                mCarName = data.getStringExtra(RESULT_EXTRA_CAR_NAME);
             }
         } else {
             Log.i(joytag, "onActivityResult() log in fail");
@@ -295,6 +307,8 @@ public class MainActivity extends Activity implements LocationListener,
         }
         updatePositionText(location);
         moveMap(location);
+        updateDb((float)location.getLongitude(),
+                (float)location.getLatitude());
     }
 
     private void updatePositionText(Location location) {
@@ -325,6 +339,56 @@ public class MainActivity extends Activity implements LocationListener,
             LatLng last = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
             mLatLngs.add(last);
             mGoogleMap.addMarker(new MarkerOptions().position(last).title("Location "+mLatLngs.size()));
+        }
+    }
+
+    private void updateDb(float longitude, float latitude) {
+        if (mName == null || mCarName == null) return;
+        DoUpdate update = new DoUpdate();
+        update.execute(longitude, latitude);
+    }
+
+    private class DoUpdate extends AsyncTask<Float, Void, String> {
+        private static final String FAIL = "update failed";
+        private static final String SUCCESS = "update successfully";
+
+        private Float mLongitude, mLatitude;
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            Log.i(joytag+"DoUpdate.onPostExecute()", ""+s);
+        }
+
+        @Override
+        protected String doInBackground(Float... params) {
+            mLongitude = params[0];
+            mLatitude = params[1];
+            try {
+                Connection connection = ConnectionHelper.connect();
+                if (connection == null) {
+                    Log.i(joytag, "connection == null");
+                    return FAIL;
+                } else {
+                    String update = "UPDATE "+ConnectionHelper.dbSheetName
+                            +" SET longitude="+mLongitude
+                            +" , latitude="+mLatitude
+                            +" , PostDateTime='"+
+                                new SimpleDateFormat("yyyy-mm-dd HH:mm:ss:SSS", Locale.ENGLISH)
+                                        .format(Calendar.getInstance().getTime())
+                            +"' WHERE ID='"+mName
+                            +"' AND carNumber='"+mCarName+"'";
+                    Statement statement = connection.createStatement();
+                    int result = statement.executeUpdate(update);
+
+                    Log.i(joytag+"DoUpdate.doInBackground()", "result="+result);
+                    return SUCCESS;
+                }
+            } catch (Exception e) {
+                Log.w(joytag+"DoUpdate.doInBackground()", "something wrong", e);
+            }
+
+            return FAIL;
         }
     }
 }

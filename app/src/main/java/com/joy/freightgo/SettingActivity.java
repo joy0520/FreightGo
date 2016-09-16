@@ -108,7 +108,9 @@ public class SettingActivity extends Activity {
                 Toast.makeText(SettingActivity.this,
                         s, Toast.LENGTH_SHORT).show();
                 Intent result = new Intent();
-                result.putExtra(MainActivity.RESULT_LOGIN_EXTRA_TAG, isSuccessful);
+                result.putExtra(MainActivity.RESULT_EXTRA_LOGIN, isSuccessful);
+                result.putExtra(MainActivity.RESULT_EXTRA_USER_NAME, name);
+                result.putExtra(MainActivity.RESULT_EXTRA_CAR_NAME, carName);
                 setResult(RESULT_OK, result);
                 finish();
             } else {
@@ -142,7 +144,9 @@ public class SettingActivity extends Activity {
                 Toast.makeText(SettingActivity.this,
                         s, Toast.LENGTH_SHORT).show();
                 Intent result = new Intent();
-                result.putExtra(MainActivity.RESULT_LOGIN_EXTRA_TAG, isSuccessful);
+                result.putExtra(MainActivity.RESULT_EXTRA_LOGIN, isSuccessful);
+                result.putExtra(MainActivity.RESULT_EXTRA_USER_NAME, name);
+                result.putExtra(MainActivity.RESULT_EXTRA_CAR_NAME, carName);
                 setResult(RESULT_OK, result);
                 finish();
             } else {
